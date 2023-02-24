@@ -16,9 +16,21 @@ def extract_characters(img_name):
 
     # Loop through the contours
     for contour in contours:
-        # Get the bounding rectangle of the contour
         x, y, w, h = cv2.boundingRect(contour)
-        if 30 < w < 100 and 40 < h < 100:
+        threshold_value = 100
+        black_found = False
+        character = img[max((y + 3), 0):y + h - 3, max((x + 3), 0):x + w - 3]
+        # Iterate over all pixels and check if their intensity values are above the threshold
+        for row in range(character.shape[0]):
+            for col in range(character.shape[1]):
+                pixel_intensity = character[row, col]
+                if (pixel_intensity < threshold_value).any():
+                    black_found = True
+                    break
+            if black_found:
+                break
+        # Get the bounding rectangle of the contour
+        if 30 < w < 100 and 40 < h < 100 and black_found:
             cv2.rectangle(img, (x+3, y+3), (x + w-3, y + h-3), (0, 255, 0), 2)
 
     # Display the image with bounding boxes
