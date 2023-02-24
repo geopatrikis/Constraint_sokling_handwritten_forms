@@ -17,7 +17,7 @@ def extract_characters(img_name):
     # Loop through the contours
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        threshold_value = 100
+        threshold_value = 200
         black_found = False
         character = img[max((y + 3), 0):y + h - 3, max((x + 3), 0):x + w - 3]
         # Iterate over all pixels and check if their intensity values are above the threshold
