@@ -3,7 +3,8 @@ import os
 import cv2
 
 correctly: int = 0
-
+# PATH = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/"
+PATH = "./Forms 24022023/fields/"
 def take_fields_and_save_them(image_mame):
     global correctly
     file_name = os.path.splitext(os.path.basename(image_mame))[0]
@@ -41,15 +42,15 @@ def take_fields_and_save_them(image_mame):
             filename = ""
             # Save the ROI as a separate image
             if i == 0:
-                filename = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/" + image_number + "_NAT.jpg"
+                filename = PATH + image_number + "_NAT.jpg"
             elif i == 1:
-                filename = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/" + image_number + "_RF.jpg"
+                filename = PATH + image_number + "_RF.jpg"
             elif i == 2:
-                filename = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/" + image_number + "_DATE.jpg"
+                filename = PATH + image_number + "_DATE.jpg"
             elif i == 3:
-                filename = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/" + image_number + "_LN.jpg"
+                filename = PATH + image_number + "_LN.jpg"
             elif i == 4:
-                filename = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/" + image_number + "_FN.jpg"
+                filename = PATH + image_number + "_FN.jpg"
             if i <= 4 and filename != "" and roi is not None:
                 try:
                     cv2.imwrite(filename, roi)
@@ -94,7 +95,9 @@ people = [
 
 # extract file name without extension
 if __name__ == '__main__':
-    dir_path = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/24022023"
+    # dir_path = "C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/24022023"
+    dir_path = "./Forms 24022023/"
+
     # Define the allowed image extensions
     img_extensions = [".jpg", ".jpeg", ".png"]
 

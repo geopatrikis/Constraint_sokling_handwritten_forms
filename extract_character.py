@@ -5,11 +5,11 @@ import torch
 from PIL import Image
 from torchvision import transforms
 from matplotlib import pyplot as plt
-from tensorflow import keras
+from tensorflow import keras, convert_to_tensor
 
 from Lenet import LeNet
 
-def preprocess(img):
+def preprocess_pytorch(img):
     #cv2.imshow("input",img)
     #cv2.waitKey(0)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -54,6 +54,54 @@ def preprocess(img):
     # Apply the transform to the tensor
     return normalized_tensor
 
+def preprocess_keras(img):
+    #cv2.imshow("input",img)
+    #cv2.waitKey(0)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray_inv = cv2.bitwise_not(gray)
+    _, binary = cv2.threshold(gray_inv, 35, 255, cv2.THRESH_BINARY)
+    # get the indices of the black pixels
+    y, x = np.nonzero(binary)
+    # get the maximum and minimum x and y coordinates
+    max_x = np.max(x)
+    min_x = np.min(x)
+    max_y = np.max(y)
+    min_y = np.min(y)
+    nonzero_indices = np.nonzero(binary)
+    zero_indices = np.where(binary == 0)
+    darkened_gray = gray.astype('float32')
+    darkened_gray[zero_indices] = 229+0.1*darkened_gray[zero_indices]
+    darkened_gray[nonzero_indices] *= 0.1
+    darkened_gray = darkened_gray.astype('uint8')
+    cropped = darkened_gray[min_y:max_y, min_x:max_x]
+    # _, thresh_img = cv2.threshold(gray_roi, 155, 255, cv2.THRESH_BINARY)
+    inverted_img = cv2.bitwise_not(cropped)
+    aspect_ratio = inverted_img.shape[1] / inverted_img.shape[0]
+    # resize the image while keeping the aspect ratio
+    new_height = 20
+    new_width = int(new_height * aspect_ratio)
+    if new_width > new_height:
+        new_width = 20
+        aspect_ratio = inverted_img.shape[0] / inverted_img.shape[1]
+        new_height = int(new_width * aspect_ratio)
+    resized_img = cv2.resize(inverted_img, (new_width, new_height))
+    # pad the resized image with black pixels to make it 28x28
+    pad_width = (
+        ((28 - new_height) // 2, (28 - new_height + 1) // 2),  # no padding on top and bottom
+        ((28 - new_width) // 2, (28 - new_width + 1) // 2))  # pad equally on both sides to make the width 28
+    padded_img = np.pad(resized_img, pad_width, mode='constant', constant_values=0)
+    # img_brighter = cv2.add(inverted_img, 50)
+    normalized_img = (cv2.resize(padded_img, (28, 28)))
+    img_tensor = convert_to_tensor(normalized_img)
+    normalized_tensor = 2 * (img_tensor - img_tensor.min()) / (img_tensor.max() - img_tensor.min()) - 1
+    return normalized_tensor
+
+
+def keras_preprocessing(img):
+    RGB = 1
+    img = img.reshape(img.shape[0], img.shape[1], img.shape[2], RGB)
+    img = img/255
+    return img
 
 def extract_characters(img_name, model):
     img = cv2.imread(img_name)

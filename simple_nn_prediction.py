@@ -84,14 +84,18 @@ def predict_date(model,characters_for_recognition,labels):
     for char in labels:
         if char != '/':
             #model(characters_for_recognition[0])
-            processed_input = extr.preprocess(characters_for_recognition[i])
-            with torch.no_grad():
-                logps = model(processed_input)
-            # Output of the network are log-probabilities, need to take exponential for probabilities
-            ps = torch.exp(logps)
-            probab = list(ps.numpy()[0])
-            print("Predicted Digit =", probab.index(max(probab)), "\tActual =", char)
-            if int(probab.index(max(probab))) == int(char):
+            # processed_input = extr.preprocess_pytorch(characters_for_recognition[i])
+            processed_input = extr.preprocess_keras(characters_for_recognition[i])
+
+            # with torch.no_grad():
+            #     logps = model(processed_input)
+            # # Output of the network are log-probabilities, need to take exponential for probabilities
+            # ps = torch.exp(logps)
+            # probab = list(ps.numpy()[0])
+            # print("Predicted Digit =", probab.index(max(probab)), "\tActual =", char)
+            pred = label_dict_inv[np.argmax(model.predict(processed_input))]
+            # if int(probab.index(max(probab))) == int(char):
+            if int(pred) == int(char):
                 correct_fields+=1
         i += 1
     return correct_fields
@@ -125,5 +129,5 @@ if __name__ == '__main__':
                 characters_of_date = extr.extract_characters(img_path, model_digits)
                 file_index = int(file[:4])
                 print(file_index)
-                correct+=predict_date(model_digits, characters_of_date, true_labels[file_index-1][2])
+                correct += predict_date(model_digits, characters_of_date, true_labels[file_index-1][2])
         print("Accuracy:", correct/(44*8))
