@@ -5,6 +5,7 @@ import torch
 from PIL import Image
 from torchvision import transforms
 from matplotlib import pyplot as plt
+from tensorflow import keras
 
 from Lenet import LeNet
 
@@ -176,10 +177,15 @@ def view_classify(img, ps):
 
 # extract file name without extension
 if __name__ == '__main__':
-    model_digits = LeNet()
-    model_digits.load_state_dict(torch.load('saved_models/digits_model_nn'))
+    # model_digits = LeNet()
+    # model_digits.load_state_dict(torch.load('saved_models/digits_model_nn'))
+    model_digits = keras.models.load_model('./alphanum_model')
+    print("Model successfully loaded")
+
     # extract_characters('C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/0001_DATE.jpg')
-    dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    # dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    dir_path = './Forms 24022023'
+    
     # Define the allowed image extensions
     img_extensions = [".jpg", ".jpeg", ".png"]
 

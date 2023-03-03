@@ -1,7 +1,8 @@
-import torch
+# import torch
 import extract_character as extr
 import os
-from Lenet import LeNet
+# from Lenet import LeNet
+from tensorflow import keras
 # extract file name without extension
 
 people = [
@@ -98,10 +99,15 @@ def predict_date(model,characters_for_recognition,labels):
 
 if __name__ == '__main__':
     print(true_labels[39][2])
-    model_digits = LeNet()
-    model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
+    # model_digits = LeNet()
+    # model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
+    model_digits = keras.models.load_model('./alphanum_model')
+    print("Model successfully loaded")
+
     # extract_characters('C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/0001_DATE.jpg')
-    dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    # dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    dir_path = './Forms 24022023'
+
     # Define the allowed image extensions
     img_extensions = ["DATE.jpg", "DATE.jpeg", "DATE.png"]
 
