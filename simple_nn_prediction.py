@@ -1,7 +1,8 @@
 import torch
 import extract_character as extr
 import os
-from Lenet import LeNet,LeNetChar
+from Lenet import LeNet, LeNetChar
+
 # extract file name without extension
 
 people = [
@@ -28,8 +29,7 @@ people = [
 
 ]
 
-
-true_labels=[
+true_labels = [
     ['NICOLE', 'CANTU', '19/03/1989', 'RFNC19038962968', 'DE1903891767'],
     ['JEREMIAH', 'TUCKER', '11/10/1972', 'RFJT11107251133', 'BR1110727764'],
     ['LORI', 'NUNEZ', '28/06/1997', 'RFLN28069748554', 'BR2806974343'],
@@ -77,13 +77,12 @@ true_labels=[
 ]
 
 
-
-def predict_date(model,characters_for_recognition,labels):
-    i=0
-    correct_fields=0
+def predict_date(model, characters_for_recognition, labels):
+    i = 0
+    correct_fields = 0
     for char in labels:
         if char != '/':
-            #model(characters_for_recognition[0])
+            # model(characters_for_recognition[0])
             processed_input = extr.preprocess(characters_for_recognition[i])
             with torch.no_grad():
                 logps = model(processed_input)
@@ -92,28 +91,28 @@ def predict_date(model,characters_for_recognition,labels):
             probab = list(ps.numpy()[0])
             print("Predicted Digit =", probab.index(max(probab)), "\tActual =", char)
             if int(probab.index(max(probab))) == int(char):
-                correct_fields+=1
+                correct_fields += 1
         i += 1
     return correct_fields
 
 
-def predict_fn(model,characters_for_recognition,labels):
-    i=0
-    correct_fields=0
+def predict_fn(model, characters_for_recognition, labels):
+    i = 0
+    correct_fields = 0
     for char in labels:
         if char != '/':
-            #model(characters_for_recognition[0])
+            # model(characters_for_recognition[0])
             processed_input = extr.preprocess(characters_for_recognition[i])
             with torch.no_grad():
                 logps = model(processed_input)
             # Output of the network are log-probabilities, need to take exponential for probabilities
             ps = torch.exp(logps)
             probab = list(ps.numpy()[0])
-            print("Predicted Char =", chr(int(probab.index(max(probab)))+65), "\tActual =", char)
-            if chr(int(probab.index(max(probab)))+65) == char:
+            print("Predicted Char =", chr(int(probab.index(max(probab))) + 65), "\tActual =", char)
+            if chr(int(probab.index(max(probab))) + 65) == char:
                 correct_fields += 1
         i += 1
-    return correct_fields,i
+    return correct_fields, i
 
 
 def predict_dates():
@@ -130,23 +129,23 @@ def predict_dates():
     # Iterate over all files and subdirectories in the directory
     for root, dirs, files in os.walk(dir_path):
         # Iterate over all files in the current directory
-        correct_num=0
+        correct_num = 0
         for file in files:
             # Check if the file has an image extension
             if any(file.endswith(ext) for ext in img_extensions):
                 # Add the full path of the image to the list
                 img_path = os.path.join(root, file)
-                characters_of_date = extr.extract_characters(img_path, model_digits)
+                characters_of_date = extr.extract_characters(img_path)
                 file_index = int(file[:4])
                 print(file_index)
-                correct_num+=predict_date(model_digits, characters_of_date, true_labels[file_index-1][2])
-        print("Accuracy:", correct_num/(44*8))
+                correct_num += predict_date(model_digits, characters_of_date, true_labels[file_index - 1][2])
+        print("Accuracy:", correct_num / (44 * 8))
 
 
 def predict_first_names():
     print(true_labels[39][0])
-    model_digits = LeNet()
-    model_digits.load_state_dict(torch.load('saved_models/characters_model_nn'))
+    model_chars = LeNetChar()
+    model_chars.load_state_dict(torch.load('saved_models/characters_model_nn'))
     # extract_characters('C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/0001_DATE.jpg')
     dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
     # Define the allowed image extensions
@@ -157,20 +156,153 @@ def predict_first_names():
     # Iterate over all files and subdirectories in the directory
     for root, dirs, files in os.walk(dir_path):
         # Iterate over all files in the current directory
-        correct_fn=0
-        total=0
+        correct_fn = 0
+        total = 0
         for file in files:
             # Check if the file has an image extension
             if any(file.endswith(ext) for ext in img_extensions):
                 # Add the full path of the image to the list
                 img_path = os.path.join(root, file)
-                characters_of_date = extr.extract_characters(img_path, model_digits)
+                characters_of_date = extr.extract_characters(img_path)
                 file_index = int(file[:4])
                 print(file_index)
-                cor,total_new=predict_fn(model_digits, characters_of_date, true_labels[file_index-1][0])
-                correct_fn+=cor
-                total+=total_new
-        print("Accuracy:", correct_fn/total)
+                cor, total_new = predict_fn(model_chars, characters_of_date, true_labels[file_index - 1][0])
+                correct_fn += cor
+                total += total_new
+        print("Accuracy:", correct_fn / total)
+
+
+def get_accurracy_for_fn(fn_string, labels_of_field, model_char):
+    boxes_of_field = extr.extract_characters(fn_string)
+    i = 0
+    correct_fields = 0
+    for char in labels_of_field:
+        # model(characters_for_recognition[0])
+        processed_input = extr.preprocess(boxes_of_field[i])
+        with torch.no_grad():
+            logps = model_char(processed_input)
+        # Output of the network are log-probabilities, need to take exponential for probabilities
+        ps = torch.exp(logps)
+        probab = list(ps.numpy()[0])
+        #print("Predicted Char =", chr(int(probab.index(max(probab))) + 65), "\tActual =", char)
+        if chr(int(probab.index(max(probab))) + 65) == char:
+            correct_fields += 1
+        i += 1
+    return correct_fields, i
+
+
+def get_accurracy_for_ln(ln_string, labels_of_field, model_char):
+    return get_accurracy_for_fn(ln_string, labels_of_field, model_char)
+
+
+def get_accurracy_for_rf(rf_string, labels_of_field, model_char, model_digits):
+    boxes_of_field = extr.extract_characters(rf_string)
+    i = 0
+    correct_fields = 0
+    for char in labels_of_field:
+        # model(characters_for_recognition[0])
+        if(len(boxes_of_field)==i):continue
+        processed_input = extr.preprocess(boxes_of_field[i])
+        if char.isdigit():
+            with torch.no_grad():
+                logps = model_digits(processed_input)
+            # Output of the network are log-probabilities, need to take exponential for probabilities
+            ps = torch.exp(logps)
+            probab = list(ps.numpy()[0])
+            #print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
+            if int(probab.index(max(probab))) == int(char):
+                correct_fields += 1
+        else:
+            with torch.no_grad():
+                logps = model_char(processed_input)
+            # Output of the network are log-probabilities, need to take exponential for probabilities
+            ps = torch.exp(logps)
+            probab = list(ps.numpy()[0])
+            #print("Predicted Char =", chr(int(probab.index(max(probab))) + 65), "\tActual =", char)
+            if chr(int(probab.index(max(probab))) + 65) == char:
+                correct_fields += 1
+        i += 1
+    return correct_fields, i
+
+
+def get_accurracy_for_date(date_string, labels_of_field, model_digits):
+    boxes_of_field = extr.extract_characters(date_string)
+    i = 0
+    correct_fields = 0
+    for char in labels_of_field:
+        if char == '/':
+            continue
+        # model(characters_for_recognition[0])
+        processed_input = extr.preprocess(boxes_of_field[i])
+        with torch.no_grad():
+            logps = model_digits(processed_input)
+        # Output of the network are log-probabilities, need to take exponential for probabilities
+        ps = torch.exp(logps)
+        probab = list(ps.numpy()[0])
+        #print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
+        if int(probab.index(max(probab))) == int(char):
+            correct_fields += 1
+        i += 1
+    return correct_fields, i
+
+
+def get_accurracy_for_nat(nat_string, labels_of_field, model_char, model_digits):
+    return get_accurracy_for_rf(nat_string, labels_of_field, model_char, model_digits)
+
+
+def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
+    padded_str = '{:04d}'.format(index)
+    index-=1
+    fn_string = folder_path + "/" + padded_str + "_FN.jpg"
+    ln_string = folder_path + "/" + padded_str + "_LN.jpg"
+    date_string = folder_path + "/" + padded_str + "_DATE.jpg"
+    rf_string = folder_path + "/" + padded_str + "_RF.jpg"
+    nat_string = folder_path + "/" + padded_str + "_NAT.jpg"
+    form_correct = 0
+    form_sum = 0
+
+    # Calculate for First Name
+    field_correct, field_total = get_accurracy_for_fn(fn_string, true_labels[index][0], model_char)
+    form_correct += field_correct
+    form_sum += field_total
+
+    # Calculate for Last Name
+    field_correct, field_total = get_accurracy_for_ln(ln_string, true_labels[index][1], model_char)
+    form_correct += field_correct
+    form_sum += field_total
+
+    # Calculate for Date
+    field_correct, field_total = get_accurracy_for_date(date_string, true_labels[index][2], model_digits)
+    form_correct += field_correct
+    form_sum += field_total
+
+    # Calculate for Reference number
+    field_correct, field_total = get_accurracy_for_rf(rf_string, true_labels[index][3], model_char, model_digits)
+    form_correct += field_correct
+    form_sum += field_total
+
+    # Calculate for National number
+    field_correct, field_total = get_accurracy_for_nat(nat_string, true_labels[index][4], model_char, model_digits)
+    form_correct += field_correct
+    form_sum += field_total
+    print("Form:" + padded_str + " Accuracy: " + str(form_correct/form_sum))
+    return form_correct, form_sum
+
+
+def calculate_overall_accuracy():
+    dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    model_chars = LeNetChar()
+    model_chars.load_state_dict(torch.load('saved_models/characters_model_nn'))
+    model_digits = LeNet()
+    model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
+    correct = 0
+    sum = 0
+    for i in range(1, 44):
+        form_correct, sum_of_form = calculate_forms_accuracy(i, dir_path, model_chars, model_digits)
+        sum += sum_of_form
+        correct += form_correct
+    print("FINAL ACCURACY= "+ str(correct/sum))
+
 
 if __name__ == '__main__':
-    predict_first_names()
+    calculate_overall_accuracy()

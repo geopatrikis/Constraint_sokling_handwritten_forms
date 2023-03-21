@@ -54,7 +54,7 @@ def preprocess(img):
     return normalized_tensor
 
 
-def extract_characters(img_name, model):
+def extract_characters(img_name):
     img = cv2.imread(img_name)
 
     # Convert the image to grayscale
