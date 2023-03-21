@@ -1,7 +1,7 @@
 import torch
 import extract_character as extr
 import os
-from Lenet import LeNet
+from Lenet import LeNet,LeNetChar
 # extract file name without extension
 
 people = [
@@ -77,6 +77,7 @@ true_labels=[
 ]
 
 
+
 def predict_date(model,characters_for_recognition,labels):
     i=0
     correct_fields=0
@@ -96,7 +97,26 @@ def predict_date(model,characters_for_recognition,labels):
     return correct_fields
 
 
-if __name__ == '__main__':
+def predict_fn(model,characters_for_recognition,labels):
+    i=0
+    correct_fields=0
+    for char in labels:
+        if char != '/':
+            #model(characters_for_recognition[0])
+            processed_input = extr.preprocess(characters_for_recognition[i])
+            with torch.no_grad():
+                logps = model(processed_input)
+            # Output of the network are log-probabilities, need to take exponential for probabilities
+            ps = torch.exp(logps)
+            probab = list(ps.numpy()[0])
+            print("Predicted Char =", chr(int(probab.index(max(probab)))+65), "\tActual =", char)
+            if chr(int(probab.index(max(probab)))+65) == char:
+                correct_fields += 1
+        i += 1
+    return correct_fields,i
+
+
+def predict_dates():
     print(true_labels[39][2])
     model_digits = LeNet()
     model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
@@ -110,7 +130,7 @@ if __name__ == '__main__':
     # Iterate over all files and subdirectories in the directory
     for root, dirs, files in os.walk(dir_path):
         # Iterate over all files in the current directory
-        correct=0
+        correct_num=0
         for file in files:
             # Check if the file has an image extension
             if any(file.endswith(ext) for ext in img_extensions):
@@ -119,5 +139,38 @@ if __name__ == '__main__':
                 characters_of_date = extr.extract_characters(img_path, model_digits)
                 file_index = int(file[:4])
                 print(file_index)
-                correct+=predict_date(model_digits, characters_of_date, true_labels[file_index-1][2])
-        print("Accuracy:", correct/(44*8))
+                correct_num+=predict_date(model_digits, characters_of_date, true_labels[file_index-1][2])
+        print("Accuracy:", correct_num/(44*8))
+
+
+def predict_first_names():
+    print(true_labels[39][0])
+    model_digits = LeNet()
+    model_digits.load_state_dict(torch.load('saved_models/characters_model_nn'))
+    # extract_characters('C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields/0001_DATE.jpg')
+    dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
+    # Define the allowed image extensions
+    img_extensions = ["FN.jpg", "FN.jpeg", "FN.png"]
+
+    # Initialize an empty list to store the image paths
+
+    # Iterate over all files and subdirectories in the directory
+    for root, dirs, files in os.walk(dir_path):
+        # Iterate over all files in the current directory
+        correct_fn=0
+        total=0
+        for file in files:
+            # Check if the file has an image extension
+            if any(file.endswith(ext) for ext in img_extensions):
+                # Add the full path of the image to the list
+                img_path = os.path.join(root, file)
+                characters_of_date = extr.extract_characters(img_path, model_digits)
+                file_index = int(file[:4])
+                print(file_index)
+                cor,total_new=predict_fn(model_digits, characters_of_date, true_labels[file_index-1][0])
+                correct_fn+=cor
+                total+=total_new
+        print("Accuracy:", correct_fn/total)
+
+if __name__ == '__main__':
+    predict_first_names()
