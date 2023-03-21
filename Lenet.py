@@ -18,8 +18,8 @@ class LeNetChar(nn.Module):
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 5*5*16)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        x = self.fc2(x)
+        x = self.fc3(x)
         return F.log_softmax(x, dim=1)
 
 

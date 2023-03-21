@@ -297,11 +297,11 @@ def calculate_overall_accuracy():
     model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
     correct = 0
     sum = 0
-    for i in range(1, 44):
+    for i in range(1, 45):
         form_correct, sum_of_form = calculate_forms_accuracy(i, dir_path, model_chars, model_digits)
         sum += sum_of_form
         correct += form_correct
-    print("FINAL ACCURACY= "+ str(correct/sum))
+    print("FINAL ACCURACY= " + str(correct/sum))
 
 
 if __name__ == '__main__':
