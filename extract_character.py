@@ -8,9 +8,10 @@ from matplotlib import pyplot as plt
 
 from Lenet import LeNet
 
+
 def preprocess(img):
-    #cv2.imshow("input",img)
-    #cv2.waitKey(0)
+    # cv2.imshow("input",img)
+    # cv2.waitKey(0)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray_inv = cv2.bitwise_not(gray)
     _, binary = cv2.threshold(gray_inv, 35, 255, cv2.THRESH_BINARY)
@@ -24,10 +25,13 @@ def preprocess(img):
     nonzero_indices = np.nonzero(binary)
     zero_indices = np.where(binary == 0)
     darkened_gray = gray.astype('float32')
-    darkened_gray[zero_indices] = 229+0.1*darkened_gray[zero_indices]
+    darkened_gray[zero_indices] = 228 + 0.1 * darkened_gray[zero_indices]
     darkened_gray[nonzero_indices] *= 0.1
     darkened_gray = darkened_gray.astype('uint8')
-    cropped = darkened_gray[min_y:max_y, min_x:max_x]
+    if min_y == max_y or min_x == max_x:
+        cropped = darkened_gray
+    else:
+        cropped = darkened_gray[min_y:max_y, min_x:max_x]
     # _, thresh_img = cv2.threshold(gray_roi, 155, 255, cv2.THRESH_BINARY)
     inverted_img = cv2.bitwise_not(cropped)
     aspect_ratio = inverted_img.shape[1] / inverted_img.shape[0]
@@ -86,16 +90,16 @@ def extract_characters(img_name):
             fields_points_sorted.append([max((y + 3), 0), y + h - 3, max((x + 3), 0), x + w - 3])
             # cv2.imwrite("C:/Users/30698/Desktop/KULeuven/Capita Selecta/test.jpeg", character)
             # show_one_prediction(character,model)
-            #cv2.rectangle(img, (x + 3, y + 3), (x + w - 3, y + h - 3), (0, 255, 0), 2)
+            # cv2.rectangle(img, (x + 3, y + 3), (x + w - 3, y + h - 3), (0, 255, 0), 2)
     fields_points_sorted.sort(key=lambda r: r[2])
     characters_sorted = []
     for field_points in fields_points_sorted:
         characters_sorted.append(img[field_points[0]:field_points[1], field_points[2]:field_points[3]])
 
     # Display the image with bounding boxes
-    #cv2.imshow('image', img)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    # cv2.imshow('image', img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     return characters_sorted
 
 
