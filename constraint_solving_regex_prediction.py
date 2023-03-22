@@ -1,121 +1,39 @@
+import numpy as np
 import torch
 import extract_character as extr
 import os
 from Lenet import LeNet, LeNetChar
 import db
+import simple_nn_prediction as nn_pred
 
 
-# extract file name without extension
-def get_prediction_probabilities(model, processed_input):
-    with torch.no_grad():
-        logps = model(processed_input)
-    # Output of the network are log-probabilities, need to take exponential for probabilities
-    ps = torch.exp(logps)
-    probab = list(ps.numpy()[0])
-    return probab
+def constraint_same_char(input_prob):
+    results = []
+    for i in range(len(input_prob[0])):
+        letter_joint = 1
+        for fields_prob in input_prob:
+            letter_joint = letter_joint * fields_prob[i]
+        results.append(letter_joint)
+    # Normalize the results so that they sum to 1
+    total = sum(results)
+    normalized_results = [x / total for x in results]
+    return normalized_results
 
 
-def take_max_probability_evaluate_char(list_of_probs, actual_char):
-    return chr(int(list_of_probs.index(max(list_of_probs))) + 65) == actual_char
+def constraint_nationality(first_letter, second_letter):
+    possible_combinations = ["DE", "BR", "BL", "IT", "BE", "US"]
+    joint_probabilities = np.zeros((26, 26))
+    for combination in possible_combinations:
+        joint_probabilities[ord(combination[0])-65][ord(combination[1])-65] =\
+            100*first_letter[ord(combination[0])-65]*(100*second_letter[ord(combination[1])-65])
 
-
-def take_max_probability_evaluate_digit(list_of_probs, actual_char):
-    return int(list_of_probs.index(max(list_of_probs))) == int(actual_char)
-
-
-def get_initial_probabilities_for_string(fn_string, model_char):
-    boxes_of_field = extr.extract_characters(fn_string)
-    i = 0
-    probs_list = []
-    for img_char in boxes_of_field:
-        # model(characters_for_recognition[0])
-        processed_input = extr.preprocess(img_char)
-        probab = get_prediction_probabilities(model_char, processed_input)
-        probs_list.append(probab)
-        i += 1
-    return probs_list
-
-
-def final_prediction_string(probs_list, labels_of_field):
-    i = 0
-    correct_fields = 0
-    for char in labels_of_field:
-        probab = probs_list[i]
-        # print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
-        if take_max_probability_evaluate_char(probab, char):
-            correct_fields += 1
-        i += 1
-    return correct_fields, i
-
-
-def get_initial_probabilities_for_rf_nat(string, labels_of_field, model_char, model_digits):
-    boxes_of_field = extr.extract_characters(string)
-    i = 0
-    correct_fields = 0
-    probab_list = []
-    for char in labels_of_field:
-        # model(characters_for_recognition[0])
-        if len(boxes_of_field) == i:
-            continue
-        processed_input = extr.preprocess(boxes_of_field[i])
-        if char.isdigit():
-            probab = get_prediction_probabilities(model_digits, processed_input)
-        else:
-            probab = get_prediction_probabilities(model_char, processed_input)
-        probab_list.append(probab)
-        i += 1
-    return probab_list
-
-
-def final_prediction_rf_nat(probs_list, labels_of_field):
-    i = 0
-    correct_fields = 0
-    for char in labels_of_field:
-        if i >= len(probs_list):
-            continue
-        probab = probs_list[i]
-        if char.isdigit():
-            if take_max_probability_evaluate_digit(probab, char):
-                correct_fields += 1
-        else:
-            if take_max_probability_evaluate_char(probab, char):
-                correct_fields += 1
-        i += 1
-    return correct_fields, i
-
-
-def get_initial_probabilities_for_date(date_string, model_digits):
-    boxes_of_field = extr.extract_characters(date_string)
-    i = 0
-    probs_list = []
-    for img_char in boxes_of_field:
-        if i == 2 or i == 5:
-            i += 1
-            continue
-        # model(characters_for_recognition[0])
-        processed_input = extr.preprocess(img_char)
-        probab = get_prediction_probabilities(model_digits, processed_input)
-        probs_list.append(probab)
-        i += 1
-    return probs_list
-
-
-def final_prediction_date(probs_list, labels_of_field):
-    i = 0
-    correct_fields = 0
-    for char in labels_of_field:
-        if char == '/':
-            continue
-        probab = probs_list[i]
-        print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
-        if take_max_probability_evaluate_digit(probab, char):
-            correct_fields += 1
-        i += 1
-    return correct_fields, i
-
-
-def get_accurracy_for_nat(nat_string, labels_of_field, model_char, model_digits):
-    return get_initial_probabilities_for_rf_nat(nat_string, labels_of_field, model_char, model_digits)
+    first_letter_jp = np.sum(joint_probabilities, axis=1) #TODO check for digits as well *first_letter
+    second_letter_jp = np.sum(joint_probabilities, axis=0) #*second_letter
+    total = sum(first_letter_jp)
+    normalized_fl = [x / total for x in first_letter_jp]
+    total = sum(second_letter_jp)
+    normalized_sl = [x / total for x in second_letter_jp]
+    return list(normalized_fl), list(normalized_sl)
 
 
 def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
@@ -127,37 +45,87 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     rf_string = folder_path + "/" + padded_str + "_RF.jpg"
     nat_string = folder_path + "/" + padded_str + "_NAT.jpg"
 
-    probs_date = get_initial_probabilities_for_date(date_string, model_digits)
-    probs_fn = get_initial_probabilities_for_string(fn_string, model_char)
-    probs_ln = get_initial_probabilities_for_string(ln_string, model_char)
-    probs_rf = get_initial_probabilities_for_rf_nat(rf_string, db.true_labels[index][3], model_char, model_digits)
-    probs_nat = get_initial_probabilities_for_rf_nat(nat_string, db.true_labels[index][4], model_char, model_digits)
+    probs_date = nn_pred.get_initial_probabilities_for_date(date_string, model_digits)
+    probs_fn = nn_pred.get_initial_probabilities_for_string(fn_string, model_char)
+    probs_ln = nn_pred.get_initial_probabilities_for_string(ln_string, model_char)
+    probs_rf = nn_pred.get_initial_probabilities_for_rf_nat(
+        rf_string, db.true_labels[index][3], model_char, model_digits)
+    probs_nat = nn_pred.get_initial_probabilities_for_rf_nat(
+        nat_string, db.true_labels[index][4], model_char, model_digits)
 
     form_correct = 0
     form_sum = 0
 
+    # Constraints for same char in First name Last Nam and RF
+
+    constraint_decision_fn_rf = constraint_same_char([probs_fn[0], probs_rf[2]])
+    constraint_decision_ln_rf = constraint_same_char([probs_ln[0], probs_rf[3]])
+    probs_fn[0] = constraint_decision_fn_rf
+    probs_rf[2] = constraint_decision_fn_rf
+    probs_ln[0] = constraint_decision_ln_rf
+    probs_rf[3] = constraint_decision_ln_rf
+
+    # Constraints for same char in days
+
+    constraint_decision_date_d1 = constraint_same_char([probs_date[0], probs_rf[4], probs_nat[2]])
+    probs_date[0] = constraint_decision_date_d1
+    probs_rf[4] = constraint_decision_date_d1
+    probs_nat[2] = constraint_decision_date_d1
+    constraint_decision_date_d2 = constraint_same_char([probs_date[1], probs_rf[5], probs_nat[3]])
+    probs_date[1] = constraint_decision_date_d2
+    probs_rf[5] = constraint_decision_date_d2
+    probs_nat[3] = constraint_decision_date_d2
+
+    # Constraints for same char in months
+
+    constraint_decision_date_m1 = constraint_same_char([probs_date[2], probs_rf[6], probs_nat[4]])
+    probs_date[2] = constraint_decision_date_m1
+    probs_rf[6] = constraint_decision_date_m1
+    probs_nat[4] = constraint_decision_date_m1
+
+    constraint_decision_date_m2 = constraint_same_char([probs_date[3], probs_rf[7], probs_nat[5]])
+    probs_date[3] = constraint_decision_date_m2
+    probs_rf[7] = constraint_decision_date_m2
+    probs_nat[5] = constraint_decision_date_m2
+
+    # Constraints for same char in years
+
+    constraint_decision_date_y1 = constraint_same_char([probs_date[6], probs_rf[8], probs_nat[6]])
+    probs_date[6] = constraint_decision_date_y1
+    probs_rf[8] = constraint_decision_date_y1
+    probs_nat[6] = constraint_decision_date_y1
+
+    constraint_decision_date_y2 = constraint_same_char([probs_date[7], probs_rf[9], probs_nat[7]])
+    probs_date[7] = constraint_decision_date_y2
+    probs_rf[9] = constraint_decision_date_y2
+    probs_nat[7] = constraint_decision_date_y2
+
+    # DE BR BL IT BE US
+    # Constraints on nationality
+    probs_nat[0] , probs_nat[1] =constraint_nationality(probs_nat[0] , probs_nat[1])
+
     # Calculate for First Name
-    field_correct, field_total = final_prediction_string(probs_fn, db.true_labels[index][0])
+    field_correct, field_total = nn_pred.final_prediction_string(probs_fn, db.true_labels[index][0])
     form_correct += field_correct
     form_sum += field_total
 
     # Calculate for Last Name
-    field_correct, field_total = final_prediction_string(probs_ln, db.true_labels[index][1])
+    field_correct, field_total = nn_pred.final_prediction_string(probs_ln, db.true_labels[index][1])
     form_correct += field_correct
     form_sum += field_total
 
     # Calculate for Date
-    field_correct, field_total = final_prediction_date(probs_date, db.true_labels[index][2])
+    field_correct, field_total = nn_pred.final_prediction_date(probs_date, db.true_labels[index][2])
     form_correct += field_correct
     form_sum += field_total
 
     # Calculate for Reference number
-    field_correct, field_total = final_prediction_rf_nat(probs_rf, db.true_labels[index][3])
+    field_correct, field_total = nn_pred.final_prediction_rf_nat(probs_rf, db.true_labels[index][3])
     form_correct += field_correct
     form_sum += field_total
 
     # Calculate for National number
-    field_correct, field_total = final_prediction_rf_nat(probs_nat, db.true_labels[index][4])
+    field_correct, field_total = nn_pred.final_prediction_rf_nat(probs_nat, db.true_labels[index][4])
     form_correct += field_correct
     form_sum += field_total
     print("Form:" + padded_str + " Accuracy: " + str(form_correct / form_sum))

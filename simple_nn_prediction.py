@@ -1,6 +1,5 @@
 import torch
 import extract_character as extr
-import os
 from Lenet import LeNet, LeNetChar
 import db
 
@@ -23,8 +22,8 @@ def take_max_probability_evaluate_digit(list_of_probs, actual_char):
     return int(list_of_probs.index(max(list_of_probs))) == int(actual_char)
 
 
-def get_initial_probabilities_for_string(fn_string, model_char):
-    boxes_of_field = extr.extract_characters(fn_string)
+def get_initial_probabilities_for_string(string, model_char):
+    boxes_of_field = extr.extract_characters(string)
     i = 0
     probs_list = []
     for img_char in boxes_of_field:
@@ -107,7 +106,7 @@ def final_prediction_date(probs_list, labels_of_field):
         if char == '/':
             continue
         probab = probs_list[i]
-        print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
+        #print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
         if take_max_probability_evaluate_digit(probab, char):
             correct_fields += 1
         i += 1
@@ -135,6 +134,7 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
 
     form_correct = 0
     form_sum = 0
+
 
     # Calculate for First Name
     field_correct, field_total = final_prediction_string(probs_fn, db.true_labels[index][0])

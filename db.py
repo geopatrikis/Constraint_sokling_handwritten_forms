@@ -22,6 +22,7 @@ people = [
     ['LORI', 'NUNEZ', '28/06/1997', 'RFLN28069748554', 'BR2806974343']
 
 ]
+#DE BR BL IT BE US
 
 true_labels = [
     ['NICOLE', 'CANTU', '19/03/1989', 'RFNC19038962968', 'DE1903891767'],
