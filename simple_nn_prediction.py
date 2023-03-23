@@ -79,6 +79,7 @@ def final_prediction_rf_nat(probs_list, labels_of_field):
         else:
             if take_max_probability_evaluate_char(probab, char):
                 correct_fields += 1
+            print("Predicted: "+chr(int(probab.index(max(probab))) + 65) + " Actual:"+char)
         i += 1
     return correct_fields, i
 
