@@ -44,13 +44,9 @@ def solve_form(fn_let_probs, ln_let_probs, date_probs, rf_probs, nat_probs):
     for i in range(2, 8):
         for j in range(16):
             nat_probs[i].append(0.0)
-    # the constraint model
-    # 1) convert logprobs to positive integers (with scaling factor)
-    # logprobs = (-logprobs * 10000).type(torch.int).numpy()
 
-    # 2) build the list of terms to sum in cost function.
-    # for every cell that is given, for v in 0..9: sum(logprobs[i,j,v]*(puzzle[i,j] == v))
-    # 3) minimize the cost
+    """The objective function is to maximize the probabilites that are given as input from the neural networks"""
+
     obj = sum([[fn_let_probs[i] * (first_letter_first_name == i) for i in range(0, 26)],
                [ln_let_probs[i] * (first_letter_last_name == i) for i in range(0, 26)],
                sum([date_probs[j][i] * (date[j] == i) for i in range(0, 10)] for j in range(0, 8)),

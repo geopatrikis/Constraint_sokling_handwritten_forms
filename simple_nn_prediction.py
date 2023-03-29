@@ -2,6 +2,7 @@ import torch
 import extract_character as extr
 from Lenet import LeNet, LeNetChar
 import db
+import time
 
 
 # extract file name without extension
@@ -35,12 +36,17 @@ def get_initial_probabilities_for_string(string, model_char):
     return probs_list
 
 
-def final_prediction_string(probs_list, labels_of_field):
+def final_prediction_string(probs_list, labels_of_field, first_letter=False):
     i = 0
     correct_fields = 0
     for char in labels_of_field:
         probab = probs_list[i]
         # print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
+        if first_letter:
+            if take_max_probability_evaluate_char(probab, char):
+                return 1, 1
+            else:
+                return 0, 1
         if take_max_probability_evaluate_char(probab, char):
             correct_fields += 1
         i += 1
@@ -66,10 +72,16 @@ def get_initial_probabilities_for_rf_nat(string, labels_of_field, model_char, mo
     return probab_list
 
 
-def final_prediction_rf_nat(probs_list, labels_of_field):
+def final_prediction_rf_nat(probs_list, labels_of_field, constraints_only_rf=False, constraints_only_nat=False):
     i = 0
     correct_fields = 0
     for char in labels_of_field:
+        if constraints_only_rf:
+            if i == 10:
+                return correct_fields, i
+        elif constraints_only_nat:
+            if i == 8:
+                return correct_fields, i
         if i >= len(probs_list):
             continue
         probab = probs_list[i]
@@ -79,7 +91,7 @@ def final_prediction_rf_nat(probs_list, labels_of_field):
         else:
             if take_max_probability_evaluate_char(probab, char):
                 correct_fields += 1
-            print("Predicted: "+chr(int(probab.index(max(probab))) + 65) + " Actual:"+char)
+            # print("Predicted: "+chr(int(probab.index(max(probab))) + 65) + " Actual:"+char)
         i += 1
     return correct_fields, i
 
@@ -107,7 +119,7 @@ def final_prediction_date(probs_list, labels_of_field):
         if char == '/':
             continue
         probab = probs_list[i]
-        #print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
+        # print("Predicted Digit =", int(probab.index(max(probab))), "\tActual =", int(char))
         if take_max_probability_evaluate_digit(probab, char):
             correct_fields += 1
         i += 1
@@ -119,6 +131,8 @@ def get_accurracy_for_nat(nat_string, labels_of_field, model_char, model_digits)
 
 
 def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
+    # in the preprocessing stage we got the form and extracted fields into a folder. We access each picture followin the
+    # next mapping with the names
     padded_str = '{:04d}'.format(index)
     index -= 1
     fn_string = folder_path + "/" + padded_str + "_FN.jpg"
@@ -126,6 +140,8 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     date_string = folder_path + "/" + padded_str + "_DATE.jpg"
     rf_string = folder_path + "/" + padded_str + "_RF.jpg"
     nat_string = folder_path + "/" + padded_str + "_NAT.jpg"
+
+    # we get the probability for each field giving the correct neural networks as input
 
     probs_date = get_initial_probabilities_for_date(date_string, model_digits)
     probs_fn = get_initial_probabilities_for_string(fn_string, model_char)
@@ -136,7 +152,8 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     form_correct = 0
     form_sum = 0
 
-
+    # the final prediction methods have been configured to take some boolean values. Setting the values to
+    # true allows us to measure accuracy in either whole test set or the fields that constraints are relevant.
     # Calculate for First Name
     field_correct, field_total = final_prediction_string(probs_fn, db.true_labels[index][0])
     form_correct += field_correct
@@ -173,11 +190,15 @@ def calculate_overall_accuracy():
     model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
     correct = 0
     sum = 0
+    start = time.time()
     for i in range(1, 45):
         form_correct, sum_of_form = calculate_forms_accuracy(i, dir_path, model_chars, model_digits)
         sum += sum_of_form
         correct += form_correct
+    print("Fields:", str(sum), " Correct:", str(correct))
     print("FINAL ACCURACY= " + str(correct / sum))
+    end = time.time()
+    print("duration: ", str(end - start))
 
 
 if __name__ == '__main__':

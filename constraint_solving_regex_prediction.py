@@ -3,24 +3,12 @@ import torch
 from Lenet import LeNet, LeNetChar
 import db
 import simple_nn_prediction as nn_pred
+import time
 import cpmpy_form_solver as solver
 
-def constraint_nationality(first_letter, second_letter):
-    possible_combinations = ["DE", "BR", "BL", "IT", "BE", "US"]
-    joint_probabilities = np.zeros((26, 26))
-    for combination in possible_combinations:
-        joint_probabilities[ord(combination[0]) - 65][ord(combination[1]) - 65] = \
-            100 * first_letter[ord(combination[0]) - 65] * (100 * second_letter[ord(combination[1]) - 65])
-
-    first_letter_jp = np.sum(joint_probabilities, axis=1)
-    second_letter_jp = np.sum(joint_probabilities, axis=0)
-    total = sum(first_letter_jp)
-    normalized_fl = [x / total for x in first_letter_jp]
-    total = sum(second_letter_jp)
-    normalized_sl = [x / total for x in second_letter_jp]
-    return list(normalized_fl), list(normalized_sl)
-
-
+"""This file makes use of simple_nn_prediction.py to get the probabilities tables for each of the characters that are 
+identified in each form and makes use of the constraint solver. The results of the constraint solver are the ones that 
+are then chosen by the final prediction methods"""
 def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     int("0010")
     padded_str = '{:04d}'.format(index)
@@ -39,24 +27,24 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     probs_nat = nn_pred.get_initial_probabilities_for_rf_nat(
         nat_string, db.true_labels[index][4], model_char, model_digits)
 
-    #---------------RUN SOLVER AND APPLY RESULTS--------------------#
+    # ---------------RUN SOLVER AND APPLY RESULTS--------------------#
     done, fl_fn, fl_ln, solvers_rf_10let, solvers_date, solvers_nat_8let = \
         solver.solve_form(probs_fn[0], probs_ln[0], probs_date, probs_rf[:10], probs_nat[:8])
 
     probs_fn[0][fl_fn] += 10000
     probs_ln[0][fl_ln] += 10000
-    for i in range(0,len(probs_date)):
+    for i in range(0, len(probs_date)):
         probs_date[i][solvers_date[i]] += 10000
 
-    for i in range(0,len(solvers_rf_10let)):
+    for i in range(0, len(solvers_rf_10let)):
         probs_rf[i][solvers_rf_10let[i]] += 10000
 
-    for i in range(2,len(solvers_nat_8let)):
+    for i in range(2, len(solvers_nat_8let)):
         probs_nat[i][solvers_nat_8let[i]] += 10000
 
     probs_nat[0], probs_nat[1] = constraint_nationality(probs_nat[0], probs_nat[1])
 
-    #---------------------------------------------------------------#
+    # ---------------------------------------------------------------#
 
     form_correct = 0
     form_sum = 0
@@ -88,6 +76,22 @@ def calculate_forms_accuracy(index, folder_path, model_char, model_digits):
     return form_correct, form_sum
 
 
+def constraint_nationality(first_letter, second_letter):
+    possible_combinations = ["DE", "BR", "BL", "IT", "BE", "US"]
+    joint_probabilities = np.zeros((26, 26))
+    for combination in possible_combinations:
+        joint_probabilities[ord(combination[0]) - 65][ord(combination[1]) - 65] = \
+            100 * first_letter[ord(combination[0]) - 65] * (100 * second_letter[ord(combination[1]) - 65])
+
+    first_letter_jp = np.sum(joint_probabilities, axis=1)
+    second_letter_jp = np.sum(joint_probabilities, axis=0)
+    total = sum(first_letter_jp)
+    normalized_fl = [x / total for x in first_letter_jp]
+    total = sum(second_letter_jp)
+    normalized_sl = [x / total for x in second_letter_jp]
+    return list(normalized_fl), list(normalized_sl)
+
+
 def calculate_overall_accuracy():
     dir_path = 'C:/Users/30698/Desktop/KULeuven/Capita Selecta/formes/fields'
     model_chars = LeNetChar()
@@ -95,12 +99,16 @@ def calculate_overall_accuracy():
     model_digits = LeNet()
     model_digits.load_state_dict(torch.load('saved_models/digits_model_nn3'))
     correct = 0
-    sum = 0
+    total_sum = 0
+    start = time.time()
     for i in range(1, 45):
         form_correct, sum_of_form = calculate_forms_accuracy(i, dir_path, model_chars, model_digits)
-        sum += sum_of_form
+        total_sum += sum_of_form
         correct += form_correct
-    print("FINAL ACCURACY= " + str(correct / sum))
+    print("Fields:", str(total_sum), " Correct:", str(correct))
+    print("FINAL ACCURACY= " + str(correct / total_sum))
+    end = time.time()
+    print("duration:", str(end - start))
 
 
 if __name__ == '__main__':
